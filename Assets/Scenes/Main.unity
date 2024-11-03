@@ -13609,9 +13609,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 229b0e9c307ca62439d2abec3303151e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cop: {fileID: 901075408}
-  treasure: {fileID: 1820957780}
-  dist2Steal: 10
+  guard: {fileID: 901075408}
+  loot: {fileID: 1820957780}
+  closeDistance: 10
 --- !u!114 &1565410015
 MonoBehaviour:
   m_ObjectHideFlags: 0

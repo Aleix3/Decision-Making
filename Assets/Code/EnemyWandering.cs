@@ -3,103 +3,94 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class EnemyWandering : MonoBehaviour
+public class EnemyPatrol : MonoBehaviour
 {
-    public NavMeshAgent agent;
-    public Transform centrePoint;
-    public Transform player;
-    public float range;
-    public float detectionRadius = 10f;
+    public NavMeshAgent navigator;
+    public Transform patrolCenter;
+    public Transform target;
+    public float patrolRange;
+    public float alertRadius = 10f;
 
-    // Añadir referencia al LineRenderer
-    private LineRenderer lineRenderer;
-    public int segments = 50; // Cuantos puntos tendrá el círculo
+    private LineRenderer radiusIndicator;
+    public int circlePoints = 50;
 
     void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
+        navigator = GetComponent<NavMeshAgent>();
+        radiusIndicator = GetComponent<LineRenderer>();
+        radiusIndicator.positionCount = circlePoints + 1;
+        radiusIndicator.useWorldSpace = false;
+        radiusIndicator.startWidth = 0.1f;
+        radiusIndicator.endWidth = 0.1f;
+        radiusIndicator.startColor = Color.green;
+        radiusIndicator.endColor = Color.green;
 
-        // Obtener el LineRenderer del objeto
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.positionCount = segments + 1;
-        lineRenderer.useWorldSpace = false;
-
-        // Configurar propiedades del LineRenderer
-        lineRenderer.startWidth = 0.1f;
-        lineRenderer.endWidth = 0.1f;
-        lineRenderer.startColor = Color.green;
-        lineRenderer.endColor = Color.green;
-
-        // Dibujar el círculo inicial
-        DrawDetectionRadius();
+        RenderAlertRadius();
     }
 
     void Update()
     {
-        float distancePlayer = Vector3.Distance(player.position, transform.position);
+        float targetDistance = Vector3.Distance(target.position, transform.position);
 
-        if (distancePlayer <= detectionRadius)
+        if (targetDistance <= alertRadius)
         {
-            FollowPlayer();
+            PursueTarget();
         }
-        else if (agent.remainingDistance <= agent.stoppingDistance)
+        else if (navigator.remainingDistance <= navigator.stoppingDistance)
         {
-            Vector3 punto;
-            if (TryGetRandomPoint(centrePoint.position, range, out punto))
+            Vector3 randomPosition;
+            if (GetRandomPoint(patrolCenter.position, patrolRange, out randomPosition))
             {
-                agent.SetDestination(punto);
+                navigator.SetDestination(randomPosition);
             }
         }
 
-        // Actualizar el círculo en caso de que detectionRadius cambie
-        DrawDetectionRadius();
+        RenderAlertRadius();
     }
 
-    bool TryGetRandomPoint(Vector3 center, float radius, out Vector3 point)
+    bool GetRandomPoint(Vector3 center, float radius, out Vector3 position)
     {
-        Vector3 potentialPoint = center + Random.insideUnitSphere * range;
-        if (NavMesh.SamplePosition(potentialPoint, out NavMeshHit navHit, 1.0f, NavMesh.AllAreas))
+        Vector3 candidatePoint = center + Random.insideUnitSphere * patrolRange;
+        if (NavMesh.SamplePosition(candidatePoint, out NavMeshHit hit, 1.0f, NavMesh.AllAreas))
         {
-            point = navHit.position;
+            position = hit.position;
             return true;
         }
 
-        point = Vector3.zero;
+        position = Vector3.zero;
         return false;
     }
 
-    void FollowPlayer()
+    void PursueTarget()
     {
-        agent.destination = player.position;
+        navigator.destination = target.position;
     }
 
-    // Método para dibujar el círculo del radio de detección
-    void DrawDetectionRadius()
+    void RenderAlertRadius()
     {
-        float angle = 360f / segments;
-        Vector3[] positions = new Vector3[segments + 1];
+        float angleStep = 360f / circlePoints;
+        Vector3[] circlePositions = new Vector3[circlePoints + 1];
 
-        for (int i = 0; i <= segments; i++)
+        for (int i = 0; i <= circlePoints; i++)
         {
-            float rad = Mathf.Deg2Rad * (i * angle);
-            float x = Mathf.Sin(rad) * detectionRadius;
-            float z = Mathf.Cos(rad) * detectionRadius;
-            positions[i] = new Vector3(x, 0, z);
+            float radian = Mathf.Deg2Rad * (i * angleStep);
+            float x = Mathf.Sin(radian) * alertRadius;
+            float z = Mathf.Cos(radian) * alertRadius;
+            circlePositions[i] = new Vector3(x, 0, z);
         }
 
-        lineRenderer.SetPositions(positions);
+        radiusIndicator.SetPositions(circlePositions);
     }
 
-    // Método para dibujar el Gizmo en la escena (Scene View)
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
+        Gizmos.DrawWireSphere(transform.position, alertRadius);
 
-        if (centrePoint != null)
+        if (patrolCenter != null)
         {
             Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(centrePoint.position, range);
+            Gizmos.DrawWireSphere(patrolCenter.position, patrolRange);
         }
     }
 }

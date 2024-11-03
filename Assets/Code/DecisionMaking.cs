@@ -1,84 +1,83 @@
 using UnityEngine;
 using System.Collections;
 
-public class FSM : MonoBehaviour
+public class AIController : MonoBehaviour
 {
-    public Transform cop;
-    public GameObject treasure;
-    public float dist2Steal = 10f;
-    Moves moves;
-    UnityEngine.AI.NavMeshAgent agent;
+    public Transform guard;
+    public GameObject loot;
+    public float closeDistance = 10f;
+    Moves moves;  // Cambiado de Actions a Moves
+    UnityEngine.AI.NavMeshAgent navAgent;
 
-    private WaitForSeconds wait = new WaitForSeconds(0.05f); // == 1/20
-    delegate IEnumerator State();
-    private State state;
+    private WaitForSeconds delay = new WaitForSeconds(0.05f);
+    delegate IEnumerator Behavior();
+    private Behavior currentBehavior;
 
     IEnumerator Start()
     {
         moves = gameObject.GetComponent<Moves>();
-        agent = gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        navAgent = gameObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
 
-        yield return wait;
+        yield return delay;
 
-        state = Wander;
+        currentBehavior = Patrol;
 
         while (enabled)
-            yield return StartCoroutine(state());
+            yield return StartCoroutine(currentBehavior());
     }
 
-    IEnumerator Wander()
+    IEnumerator Patrol()
     {
-        Debug.Log("Wander state");
+        Debug.Log("Patrolling");
 
-        while (Vector3.Distance(cop.position, treasure.transform.position) < dist2Steal)
+        while (Vector3.Distance(guard.position, loot.transform.position) < closeDistance)
         {
             moves.Wander();
-            yield return wait;
+            yield return delay;
         };
 
-        state = Approaching;
+        currentBehavior = Approach;
     }
 
-    IEnumerator Approaching()
+    IEnumerator Approach()
     {
-        Debug.Log("Approaching state");
+        Debug.Log("Approaching");
 
-        agent.speed = 8f;
-        moves.Seek(treasure.transform.position);
+        navAgent.speed = 8f;
+        moves.Seek(loot.transform.position);
 
-        bool stolen = false;
-        while (Vector3.Distance(cop.position, treasure.transform.position) > dist2Steal)
+        bool acquired = false;
+        while (Vector3.Distance(guard.position, loot.transform.position) > closeDistance)
         {
-            if (Vector3.Distance(treasure.transform.position, transform.position) < 2f)
+            if (Vector3.Distance(loot.transform.position, transform.position) < 2f)
             {
-                stolen = true;
+                acquired = true;
                 break;
             };
-            yield return wait;
+            yield return delay;
         };
 
-        if (stolen)
+        if (acquired)
         {
-            treasure.GetComponent<Renderer>().enabled = false;
-            Debug.Log("Stolen");
-            state = Hiding;
+            loot.GetComponent<Renderer>().enabled = false;
+            Debug.Log("Acquired");
+            currentBehavior = Hide;
         }
         else
         {
-            agent.speed = 8f;
-            state = Wander;
+            navAgent.speed = 8f;
+            currentBehavior = Patrol;
         }
     }
 
-
-    IEnumerator Hiding()
+    IEnumerator Hide()
     {
-        Debug.Log("Hiding state");
+        Debug.Log("Hiding");
 
         while (true)
         {
             moves.Hide();
-            yield return wait;
+            yield return delay;
         };
     }
 }
